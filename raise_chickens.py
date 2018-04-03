@@ -8,7 +8,9 @@ import random
 import numpy as np
 import time
 import tempfile
+import platform
 
+current_platform = platform.system()
 templates_dir = 'templates'
 screenshot_img = '{}/current_gemfield_farm.png'.format(tempfile.gettempdir())
 adb_screenshot_cmd = 'adb exec-out screencap -p > {}'.format(screenshot_img)
@@ -18,12 +20,14 @@ adb_screen_stayon_cmd = 'adb shell svc power stayon usb'
 
 def errorMsg(str):
     print('Error: {}'.format(str) )
-    os.system('wall Error: {}'.format(str))
+    if current_platform == 'Linux':
+        os.system('wall Error: {}'.format(str))
     sys.exit(1)
 
 def warningMsg(str):
     print('Warning: {}'.format(str) )
-    os.system('wall Warning: {}'.format(str))
+    if current_platform == 'Linux':
+        os.system('wall Warning: {}'.format(str))
     
 
 def swipe(start_x, start_y, end_x, end_y, duration):
@@ -124,7 +128,7 @@ class AntFarm(object):
 
         x,y = self.crib_pos
         adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-        print('preparing to feed gemfield chicken with {}...'.format(adb_tap_cmd))
+        warningMsg('preparing to feed gemfield chicken with {}...'.format(adb_tap_cmd))
         os.system(adb_tap_cmd)
 
     def expelThief(self):
