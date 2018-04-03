@@ -44,10 +44,10 @@ def loadTemplate(template_img):
         errorMsg('Template {} not exist.'.format(template_img))
     return rc
 
+    
 class AntFarm(object):
     def __init__(self, logdir=None):
         self.logdir = logdir
-        self.bb_size = [300, 300]
         self.step = 0
         self.monitor = None
         self.templates_dir = templates_dir
@@ -66,6 +66,12 @@ class AntFarm(object):
         self.double_indicator_template = loadTemplate(os.path.join(self.templates_dir, 'double_indicator.png') )
         self.thief_template = loadTemplate(os.path.join(self.templates_dir, 'thief.png') )
         self.robber_template = loadTemplate(os.path.join(self.templates_dir, 'robber.png') )
+        ##
+        self.ant_farm_neighbour_flag_template = loadTemplate(os.path.join(self.templates_dir, 'ant_farm_neighbour_flag.png') )
+        self.ant_farm_neighbour_template = loadTemplate(os.path.join(self.templates_dir, 'ant_farm_neighbour.png') )
+        self.back_from_ant_farm_template = loadTemplate(os.path.join(self.templates_dir, 'back_from_ant_farm.png') )
+        self.ant_farm_icon_template = loadTemplate(os.path.join(self.templates_dir, 'ant_farm_icon.png') )
+        self.thief_flag_template = loadTemplate(os.path.join(self.templates_dir, 'thief_flag.png') )
 
     def scanFarm(self):
         adb_rc = 1
@@ -89,29 +95,49 @@ class AntFarm(object):
         self.resolution = self.monitor.shape[:2]
         #delete the image
         os.remove(screenshot_img)
-
+        
+    def checkFarm(self):
+        for i in range(3):
+            if self.getBackIconPos():
+                return
+            #suppose we are in homepage
+            rc = self.match(self.ant_farm_icon_template, 0.9, 'ant_farm_icon_template')
+            if not rc:
+                errorMsg('Open your zhifubao App')
+                
+            x,y = rc
+            adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
+                
+            os.system(adb_tap_cmd)
+            time.sleep(10)
+            self.scanFarm()
+        errorMsg('Cannot locate your zhifubao app correctly.')
+        
     def setScreenStayon(self):
         print('preparing to keep screen on...')
         # os.system(adb_lighter_cmd)
         # os.system(adb_darker_cmd)
         os.system(adb_screen_stayon_cmd)
 
+    def getBackIconPos(self):
+        return self.match(self.back_from_ant_farm_template, 0.9, 'back_from_ant_farm_template', is_left=True)
+        
     def getCribPos(self):
-        rc = self.match(self.crib_template, 0.8)
+        rc = self.match(self.crib_template, 0.8, 'crib_template')
         return rc
 
     def getIndicatorPos(self):
-        rc = self.match(self.indicator_template, 0.8)
+        rc = self.match(self.indicator_template, 0.8, 'indicator_template')
         if rc is None:
-            rc = self.match(self.double_indicator_template, 0.8)
+            rc = self.match(self.double_indicator_template, 0.8, 'double_indicator_template')
 
         return rc
 
     def getThiefPos(self):
-        return self.match(self.thief_template, 0.8)
+        return self.match(self.thief_template, 0.8, 'thief_template')
 
     def getRobberPos(self):
-        return self.match(self.robber_template, 0.8)
+        return self.match(self.robber_template, 0.8, 'robber_template')
         
     def feed(self):
         rc = self.getIndicatorPos()
@@ -156,25 +182,42 @@ class AntFarm(object):
         os.system(adb_tap_cmd)
 
 
-    def match(self, template, threshold):
+    def match(self, template, threshold, op, is_left=False):
         monitor = cv2.cvtColor(self.monitor, cv2.COLOR_BGR2GRAY)
         w, h = template.shape[::-1]
         res = cv2.matchTemplate(monitor, template, cv2.TM_CCOEFF_NORMED)
-
-        print('Max probability: {}'.format(res.max()))
-        threshold = max(threshold, res.max() )
+        res_max = res.max()
+        print('{}: {}'.format(op, res_max))
+        threshold = max(threshold, res_max)
 
         loc = np.where( res >= threshold)
 
         rc = None
         for pt in zip(*loc[::-1]):
-            rc = (pt[0] + w//2, pt[1] + h//2)
-            #cv2.rectangle(self.monitor, pt, (pt[0] + w, pt[1] + h), (0,0,255), 2)
-        #cv2.imwrite('res.png', self.monitor)
+            if is_left:
+                rc = (pt[0] + w//10, pt[1] + h//2)
+            else:
+                rc = (pt[0] + w//2, pt[1] + h//2)
+
         return rc
+    
+    def backhome(self):
+        rc = self.getBackIconPos()
+            
+        if not rc:
+            errorMsg('Cannot locate your zhifubao UI when backhome from ant farm.')
+                
+        x,y = rc
+
+        adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
+        print(adb_tap_cmd)
+        os.system(adb_tap_cmd)
+        time.sleep(5)
+        
 
     def play(self):
         self.scanFarm()
+        self.checkFarm()
         self.expelThief()
         self.expelRobber()
         self.feed()
@@ -186,5 +229,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     chicken = AntFarm(args.logdir)
+    #forest = AntForest(args.logdir)
+
+    counter = 0
     while True:
+        counter += 1
         chicken.play()
+        #if counter % 100 == 0:
+        #    chicken.backhome()
+
+        
+        #forest.play()
