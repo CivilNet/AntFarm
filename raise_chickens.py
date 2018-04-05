@@ -72,6 +72,13 @@ class AntFarm(object):
         self.back_from_ant_farm_template = loadTemplate(os.path.join(self.templates_dir, 'back_from_ant_farm.png') )
         self.ant_farm_icon_template = loadTemplate(os.path.join(self.templates_dir, 'ant_farm_icon.png') )
         self.thief_flag_template = loadTemplate(os.path.join(self.templates_dir, 'thief_flag.png') )
+        ##
+        self.forest_icon_template = loadTemplate(os.path.join(self.templates_dir,'forest_icon.png'))
+        self.back_from_forest_template = loadTemplate(os.path.join(self.templates_dir,'back_from_forest.png'))
+        ##
+        self.more_friends_template = loadTemplate(os.path.join(self.templates_dir,'more_friends.png'))
+        self.forest_energy_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy.png'))
+        self.forest_energy_ball_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy_ball.png'))
 
     def scanFarm(self):
         adb_rc = 1
@@ -92,7 +99,7 @@ class AntFarm(object):
         self.step += 1
         print('<========================== scan farm {} times ==========================>'.format(self.step))
         self.monitor = cv2.imread(screenshot_img)
-        self.resolution = self.monitor.shape[:2]
+        self.height, self.width = self.monitor.shape[:2]
         #delete the image
         os.remove(screenshot_img)
         
@@ -201,18 +208,11 @@ class AntFarm(object):
 
         return rc
     
-    def backhome(self):
-        rc = self.getBackIconPos()
-            
-        if not rc:
-            errorMsg('Cannot locate your zhifubao UI when backhome from ant farm.')
-                
-        x,y = rc
-
-        adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
+    def backhome(self, is_forest=False):
+        adb_tap_cmd = 'adb shell input keyevent 4'
         print(adb_tap_cmd)
         os.system(adb_tap_cmd)
-        time.sleep(5)
+        time.sleep(1)
         
 
     def play(self):
@@ -221,7 +221,102 @@ class AntFarm(object):
         self.expelThief()
         self.expelRobber()
         self.feed()
-        time.sleep(getRandomSleep())
+        #time.sleep(getRandomSleep())
+        time.sleep(5)
+
+    def findMoreFriends(self):
+        for i in range(3):
+            swipe(self.width // 2, self.height - 10, self.width // 2, 10, 1000 )
+            self.scanFarm()
+            rc = self.getMoreFriendsIconPos()
+            if not rc:
+                continue
+            x,y = rc
+            adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
+            print(adb_tap_cmd)
+            os.system(adb_tap_cmd)
+            time.sleep(5)
+            break
+
+    def getEnergyFromFriend(self, x, y):
+        adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
+        print(adb_tap_cmd)
+        os.system(adb_tap_cmd)
+        time.sleep(5)
+        self.scanFarm()
+        for i in range(6):
+            rc = self.getEnergyBallPos()
+            if not rc:
+                break
+            x,y = rc
+            adb_tap_cmd = 'adb shell input tap {} {}'.format(x, y - 60)
+            print(adb_tap_cmd)
+            os.system(adb_tap_cmd)
+            time.sleep(1)
+            self.scanFarm()
+        
+        #back
+        adb_tap_cmd = 'adb shell input keyevent 4'
+        print(adb_tap_cmd)
+        os.system(adb_tap_cmd)
+        time.sleep(1)
+        self.scanFarm()
+        
+
+    #current screen
+    def getEnergy(self):
+        for i in range(10):
+            rc = self.getEnergyPos()
+            if not rc:
+                break
+            x,y = rc
+            self.getEnergyFromFriend(x,y)
+    
+    def getForestBackIconPos(self):
+        return self.match(self.back_from_forest_template, 0.9, 'back_from_forest_template', is_left=True)
+
+    def getMoreFriendsIconPos(self):
+        return self.match(self.more_friends_template, 0.9, 'more_friends_template')
+
+    def getEnergyPos(self):
+        return self.match(self.forest_energy_template, 0.9, 'forest_energy_template')
+
+    def getEnergyBallPos(self):
+        return self.match(self.forest_energy_ball_template, 0.8, 'forest_energy_ball_template')
+        
+    def checkForest(self):
+        for i in range(3):
+            if self.getForestBackIconPos():
+                return
+            #suppose we are in homepage
+            rc = self.match(self.forest_icon_template, 0.9, 'forest_icon_template')
+            if not rc:
+                errorMsg('Open your zhifubao App')
+                
+            x,y = rc
+            adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
+                
+            os.system(adb_tap_cmd)
+            time.sleep(10)
+            self.scanFarm()
+        errorMsg('Cannot locate your zhifubao app correctly.')
+
+    def playForest(self):
+        self.scanFarm()
+        self.checkForest()
+        self.findMoreFriends()
+        for i in range(30):
+            self.scanFarm()
+            self.getEnergy()
+            swipe(self.width // 2, self.height - 10, self.width // 2, 300, 2000 )
+            
+        #back
+        adb_tap_cmd = 'adb shell input keyevent 4'
+        print(adb_tap_cmd)
+        os.system(adb_tap_cmd)
+        swipe(self.width // 2, 10 , self.width // 2, self.height - 10 , 1000 )
+        time.sleep(1)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -229,14 +324,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     chicken = AntFarm(args.logdir)
-    #forest = AntForest(args.logdir)
 
     counter = 0
     while True:
         counter += 1
         chicken.play()
-        #if counter % 100 == 0:
-        #    chicken.backhome()
+        if counter % 100 == 17:
+            chicken.backhome()
+        # chicken.playForest()
+        # chicken.backhome(True)
 
-        
-        #forest.play()
