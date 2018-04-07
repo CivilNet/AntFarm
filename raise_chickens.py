@@ -9,6 +9,7 @@ import numpy as np
 import time
 import tempfile
 import platform
+import datetime
 
 current_platform = platform.system()
 templates_dir = 'templates'
@@ -33,6 +34,7 @@ def warningMsg(str):
 def swipe(start_x, start_y, end_x, end_y, duration):
     adb_swipe_cmd = 'adb shell input swipe {} {} {} {} {}'.format(start_x, start_y, end_x, end_y, duration)
     os.system(adb_swipe_cmd)
+    time.sleep(1)
 
 def getRandomSleep():
     #30 ~ 120 s
@@ -78,7 +80,14 @@ class AntFarm(object):
         ##
         self.more_friends_template = loadTemplate(os.path.join(self.templates_dir,'more_friends.png'))
         self.forest_energy_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy.png'))
-        self.forest_energy_ball_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy_ball.png'))
+        # self.forest_energy_ball_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy_ball.png'))
+        # self.forest_energy_ball_night_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy_ball_night.png'))
+        # self.forest_energy_ball_day_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy_ball_day.png'))
+        # self.forest_energy_ball_day_grey_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy_ball_day_grey.jpg'))
+        # self.forest_energy_ball_night_grey_template = loadTemplate(os.path.join(self.templates_dir,'forest_energy_ball_night_grey.jpg'))
+
+        self.energy_hand_night_template = loadTemplate(os.path.join(self.templates_dir,'energy_hand_night.png'))
+        self.energy_hand_day_template = loadTemplate(os.path.join(self.templates_dir,'energy_hand_day.png'))
 
     def scanFarm(self):
         adb_rc = 1
@@ -116,7 +125,7 @@ class AntFarm(object):
             adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
                 
             os.system(adb_tap_cmd)
-            time.sleep(10)
+            time.sleep(6)
             self.scanFarm()
         errorMsg('Cannot locate your zhifubao app correctly.')
         
@@ -188,45 +197,41 @@ class AntFarm(object):
         warningMsg('preparing to expel the robber with {}...'.format(adb_tap_cmd))
         os.system(adb_tap_cmd)
 
-
-    def match(self, template, threshold, op, is_left=False):
+    def match(self, template, threshold, op, is_left=False, thresh=False):
         monitor = cv2.cvtColor(self.monitor, cv2.COLOR_BGR2GRAY)
+        if thresh:
+            monitor = cv2.adaptiveThreshold(monitor,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+            cv2.imwrite('gemfield_{}.jpg'.format(self.step),monitor)
         w, h = template.shape[::-1]
         res = cv2.matchTemplate(monitor, template, cv2.TM_CCOEFF_NORMED)
         res_max = res.max()
         print('{}: {}'.format(op, res_max))
         threshold = max(threshold, res_max)
-
         loc = np.where( res >= threshold)
-
         rc = None
         for pt in zip(*loc[::-1]):
             if is_left:
                 rc = (pt[0] + w//10, pt[1] + h//2)
             else:
                 rc = (pt[0] + w//2, pt[1] + h//2)
-
         return rc
     
-    def backhome(self, is_forest=False):
+    def backhome(self):
         adb_tap_cmd = 'adb shell input keyevent 4'
         print(adb_tap_cmd)
         os.system(adb_tap_cmd)
         time.sleep(1)
         
-
     def play(self):
         self.scanFarm()
         self.checkFarm()
         self.expelThief()
         self.expelRobber()
         self.feed()
-        #time.sleep(getRandomSleep())
-        time.sleep(5)
 
     def findMoreFriends(self):
         for i in range(3):
-            swipe(self.width // 2, self.height - 10, self.width // 2, 10, 1000 )
+            swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 400 )
             self.scanFarm()
             rc = self.getMoreFriendsIconPos()
             if not rc:
@@ -242,7 +247,7 @@ class AntFarm(object):
         adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
         print(adb_tap_cmd)
         os.system(adb_tap_cmd)
-        time.sleep(5)
+        time.sleep(2)
         self.scanFarm()
         for i in range(6):
             rc = self.getEnergyBallPos()
@@ -252,7 +257,6 @@ class AntFarm(object):
             adb_tap_cmd = 'adb shell input tap {} {}'.format(x, y - 60)
             print(adb_tap_cmd)
             os.system(adb_tap_cmd)
-            time.sleep(1)
             self.scanFarm()
         
         #back
@@ -261,7 +265,6 @@ class AntFarm(object):
         os.system(adb_tap_cmd)
         time.sleep(1)
         self.scanFarm()
-        
 
     #current screen
     def getEnergy(self):
@@ -282,8 +285,11 @@ class AntFarm(object):
         return self.match(self.forest_energy_template, 0.9, 'forest_energy_template')
 
     def getEnergyBallPos(self):
-        return self.match(self.forest_energy_ball_template, 0.8, 'forest_energy_ball_template')
-        
+        rc = self.match(self.energy_hand_day_template, 0.9, 'energy_hand_day_template', thresh=False)
+        if rc is None:
+            rc = self.match(self.energy_hand_night_template, 0.7, 'energy_hand_night_template', thresh=False)
+        return rc
+
     def checkForest(self):
         for i in range(3):
             if self.getForestBackIconPos():
@@ -297,7 +303,7 @@ class AntFarm(object):
             adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
                 
             os.system(adb_tap_cmd)
-            time.sleep(10)
+            time.sleep(6)
             self.scanFarm()
         errorMsg('Cannot locate your zhifubao app correctly.')
 
@@ -308,15 +314,13 @@ class AntFarm(object):
         for i in range(30):
             self.scanFarm()
             self.getEnergy()
-            swipe(self.width // 2, self.height - 10, self.width // 2, 300, 2000 )
-            
+            swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
         #back
         adb_tap_cmd = 'adb shell input keyevent 4'
         print(adb_tap_cmd)
         os.system(adb_tap_cmd)
-        swipe(self.width // 2, 10 , self.width // 2, self.height - 10 , 1000 )
+        os.system(adb_tap_cmd)
         time.sleep(1)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -327,10 +331,11 @@ if __name__ == "__main__":
 
     counter = 0
     while True:
+        now = datetime.datetime.now()
         counter += 1
         chicken.play()
-        if counter % 100 == 17:
+        if now.hour == 7 and now.minute <= 30:
             chicken.backhome()
-        # chicken.playForest()
-        # chicken.backhome(True)
+            chicken.playForest()
+        time.sleep(getRandomSleep())
 
