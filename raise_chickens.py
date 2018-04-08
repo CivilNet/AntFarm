@@ -125,7 +125,7 @@ class AntFarm(object):
             adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
                 
             os.system(adb_tap_cmd)
-            time.sleep(6)
+            time.sleep(10)
             self.scanFarm()
         errorMsg('Cannot locate your zhifubao app correctly.')
         
@@ -334,8 +334,9 @@ if __name__ == "__main__":
         now = datetime.datetime.now()
         counter += 1
         chicken.play()
-        if now.hour == 7 and now.minute <= 30:
+        if now.hour == 7 and now.minute <= 30 or counter == 1:
             chicken.backhome()
             chicken.playForest()
+            continue
         time.sleep(getRandomSleep())
 
