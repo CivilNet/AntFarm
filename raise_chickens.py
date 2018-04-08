@@ -287,7 +287,7 @@ class AntFarm(object):
     def getEnergyBallPos(self):
         rc = self.match(self.energy_hand_day_template, 0.9, 'energy_hand_day_template', thresh=False)
         if rc is None:
-            rc = self.match(self.energy_hand_night_template, 0.7, 'energy_hand_night_template', thresh=False)
+            rc = self.match(self.energy_hand_night_template, 0.9, 'energy_hand_night_template', thresh=False)
         return rc
 
     def checkForest(self):
