@@ -114,19 +114,21 @@ class AntFarm(object):
         
     def checkFarm(self):
         for i in range(3):
+            self.scanFarm()
             if self.getBackIconPos():
                 return
             #suppose we are in homepage
             rc = self.match(self.ant_farm_icon_template, 0.9, 'ant_farm_icon_template')
             if not rc:
-                errorMsg('Open your zhifubao App')
+                time.sleep(8)
+                print('try again to locate zhifubao home page...')
+                continue
                 
             x,y = rc
             adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-                
             os.system(adb_tap_cmd)
-            time.sleep(10)
-            self.scanFarm()
+            time.sleep(5)
+
         errorMsg('Cannot locate your zhifubao app correctly.')
         
     def setScreenStayon(self):
@@ -162,8 +164,12 @@ class AntFarm(object):
             print('Still has food left...')
             return
  
-        if self.crib_pos is None:
+        for i in range(3):
             self.crib_pos = self.getCribPos()
+            if self.crib_pos:
+                break
+            time.sleep(3)
+            self.scanFarm()
 
         if self.crib_pos is None:
             errorMsg('Make sure your screen of phone is on...')
@@ -223,7 +229,6 @@ class AntFarm(object):
         time.sleep(1)
         
     def play(self):
-        self.scanFarm()
         self.checkFarm()
         self.expelThief()
         self.expelRobber()
@@ -319,8 +324,9 @@ class AntFarm(object):
         adb_tap_cmd = 'adb shell input keyevent 4'
         print(adb_tap_cmd)
         os.system(adb_tap_cmd)
+        time.sleep(2)
         os.system(adb_tap_cmd)
-        time.sleep(1)
+        time.sleep(2)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
