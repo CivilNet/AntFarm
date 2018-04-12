@@ -115,7 +115,7 @@ class AntFarm(object):
     def checkFarm(self):
         for i in range(3):
             self.scanFarm()
-            if self.getBackIconPos():
+            if self.getCribPos():
                 return
             #suppose we are in homepage
             rc = self.match(self.ant_farm_icon_template, 0.9, 'ant_farm_icon_template')
@@ -127,7 +127,7 @@ class AntFarm(object):
             x,y = rc
             adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
             os.system(adb_tap_cmd)
-            time.sleep(5)
+            time.sleep(8)
 
         errorMsg('Cannot locate your zhifubao app correctly.')
         
