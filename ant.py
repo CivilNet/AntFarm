@@ -16,6 +16,7 @@ TMPLATES_DIR = 'template_icons'
 screenshot_img = '{}/current_gemfield_farm.png'.format(tempfile.gettempdir())
 adb_screenshot_cmd = 'adb exec-out screencap -p > {}'.format(screenshot_img)
 adb_screen_stayon_cmd = 'adb shell svc power stayon usb'
+adb_back_cmd = 'adb shell input keyevent 4'
 
 def errorMsg(str):
     print('Error: {}'.format(str) )
@@ -94,16 +95,18 @@ class Ant(object):
         return self.match(self.template_dict[template_name], threshold, template_name, is_left)
 
     def checkFarm(self):
-        for i in range(3):
+        for i in range(5):
             self.scanMonitor()
             if self.getIconPos('crib_template', 0.8):
                 return
             #suppose we are in homepage
             rc = self.getIconPos('ant_farm_icon_template', 0.9)
             if not rc:
-                time.sleep(8)
-                print('try again to locate zhifubao home page...')
+                print(adb_back_cmd)
+                os.system(adb_back_cmd)
+                time.sleep(2)
                 continue
+
             x,y = rc
             adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
             os.system(adb_tap_cmd)
@@ -178,32 +181,35 @@ class Ant(object):
         os.system(adb_tap_cmd)
 
     def backhome(self):
-        adb_tap_cmd = 'adb shell input keyevent 4'
-        print(adb_tap_cmd)
-        os.system(adb_tap_cmd)
-        time.sleep(1)
+        print(adb_back_cmd)
+        os.system(adb_back_cmd)
+        time.sleep(2)
 
-    def playAntfarm(self):
+    def playFarm(self):
         self.checkFarm()
         self.expelThief()
         self.expelRobber()
         self.feed()
 
     def checkForest(self):
-        for i in range(3):
+        for i in range(5):
+            self.scanMonitor()
             if self.getIconPos('back_from_forest_template', 0.9, is_left=True):
                 return
             #suppose we are in homepage
             rc = self.getIconPos('forest_icon_template', 0.9)
             if not rc:
-                errorMsg('Open your zhifubao App')
-                
+                print(adb_back_cmd)
+                os.system(adb_back_cmd)
+                time.sleep(2)
+                continue
+
             x,y = rc
             adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
                 
             os.system(adb_tap_cmd)
-            time.sleep(6)
-            self.scanMonitor()
+            time.sleep(8)
+            
         errorMsg('Cannot locate your zhifubao app correctly.')
 
     def findMoreFriends(self):
@@ -248,14 +254,12 @@ class Ant(object):
             os.system(adb_tap_cmd)
             self.scanMonitor()
         #back
-        adb_tap_cmd = 'adb shell input keyevent 4'
-        print(adb_tap_cmd)
-        os.system(adb_tap_cmd)
-        time.sleep(1)
+        print(adb_back_cmd)
+        os.system(adb_back_cmd)
+        time.sleep(2)
         self.scanMonitor()
 
     def playForest(self):
-        self.scanMonitor()
         self.checkForest()
         self.findMoreFriends()
         for i in range(30):
@@ -263,26 +267,61 @@ class Ant(object):
             self.getEnergy()
             swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
         #back
-        adb_tap_cmd = 'adb shell input keyevent 4'
-        print(adb_tap_cmd)
-        os.system(adb_tap_cmd)
-        time.sleep(2)
-        os.system(adb_tap_cmd)
-        time.sleep(2)
+        for i in range(5):
+            print(adb_back_cmd)
+            os.system(adb_back_cmd)
+            time.sleep(3)
+            self.scanMonitor()
+            rc = self.getIconPos('forest_icon_template', 0.9)
+            if rc:
+                return
+        errorMsg('Could not back to Zhifubao homepage.')
+
+class Antforest(Ant):
+    def play(self):
+        while True:
+            self.playForest()
+            time.sleep(getRandomSleep())
+
+class Antfarm(Ant):
+    def play(self):
+        while True:
+            self.playFarm()
+            time.sleep(getRandomSleep())
+
+class Antdefault(Ant):
+    def play(self):
+        counter = 0
+        while True:
+            now = datetime.datetime.now()
+            counter += 1
+            self.playFarm()
+            if now.hour == 7 and now.minute <= 40 or counter == 1:
+                self.backhome()
+                self.playForest()
+                continue
+            time.sleep(getRandomSleep())
+
+class Antall(Ant):
+    def play(self):
+        counter = 0
+        while True:
+            now = datetime.datetime.now()
+            counter += 1
+            self.playFarm()
+            if now.minute <= 2 or counter == 1:
+                self.backhome()
+                self.playForest()
+                continue
+            time.sleep(getRandomSleep())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--logdir', default=None, type=str, help='You should specify the log dir.')
+    parser.add_argument('--mode', default='default', type=str, help='There have 4 modes: forest|farm|default|all')
     args = parser.parse_args()
-    ant = Ant(args.logdir)
+    if args.mode not in ['default','farm','forest','all']:
+        errorMsg('Usage: {} --mode <forest|farm|default|all>'.format(sys.argv[0]))
 
-    counter = 0
-    while True:
-        now = datetime.datetime.now()
-        counter += 1
-        ant.playAntfarm()
-        if now.hour == 7 and now.minute <= 30 or counter == 1:
-            ant.backhome()
-            ant.playForest()
-            continue
-        time.sleep(getRandomSleep())
+    ant = eval('Ant{}'.format(args.mode))(args.logdir)
+    ant.play()
