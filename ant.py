@@ -97,6 +97,17 @@ class Ant(object):
     def checkFarm(self):
         for i in range(5):
             self.scanMonitor()
+            #need to close prompt window first
+            rc = self.getIconPos('close_donate_icon_template', 0.9)
+            if not rc:
+                rc = self.getIconPos('close_icon_template', 0.8)
+            if rc:
+                x,y = rc
+                adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
+                os.system(adb_tap_cmd)
+                time.sleep(2)
+                continue
+            #check crib
             if self.getIconPos('crib_template', 0.8):
                 return
             #suppose we are in homepage
@@ -228,6 +239,7 @@ class Ant(object):
 
     #current screen
     def getEnergy(self):
+        self.scanMonitor()
         for i in range(10):
             rc = self.getIconPos('forest_energy_template', 0.9)
             if not rc:
@@ -262,10 +274,16 @@ class Ant(object):
     def playForest(self):
         self.checkForest()
         self.findMoreFriends()
+        count = 0
         for i in range(30):
-            self.scanMonitor()
             self.getEnergy()
+            if self.getIconPos('no_friends_template', 0.8):
+                print('end of friends list')
+                count += 1
+            if count >= 2:
+                break
             swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
+
         #back
         for i in range(5):
             print(adb_back_cmd)
@@ -309,7 +327,7 @@ class Antall(Ant):
             now = datetime.datetime.now()
             counter += 1
             self.playFarm()
-            if now.minute <= 2 or counter == 1:
+            if (now.hour == 7 and now.minute <= 35) or (now.hour > 7 and now.minute <= 2) or counter == 1:
                 self.backhome()
                 self.playForest()
                 continue
