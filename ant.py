@@ -314,7 +314,8 @@ class Antdefault(Ant):
             now = datetime.datetime.now()
             counter += 1
             self.playFarm()
-            if now.hour == 7 and now.minute <= 40 or counter == 1:
+            is_breakfast = now.hour == 7 and now.minute <= 35
+            if is_breakfast or counter == 1:
                 self.backhome()
                 self.playForest()
                 continue
@@ -327,7 +328,9 @@ class Antall(Ant):
             now = datetime.datetime.now()
             counter += 1
             self.playFarm()
-            if (now.hour == 7 and now.minute <= 35) or (now.hour > 7 and now.minute <= 2) or counter == 1:
+            is_breakfast = now.hour == 7 and now.minute <= 35
+            is_snacks = (now.hour <2 or now.hour >= 6) and now.minute <= 2
+            if is_breakfast or is_snacks or counter == 1:
                 self.backhome()
                 self.playForest()
                 continue
