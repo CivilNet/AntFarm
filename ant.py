@@ -81,10 +81,10 @@ class Ant(object):
         if not os.path.isfile(screenshot_img):
             errorMsg('Could not take a screenshot from adb command. Check your phone connection with computer.')
 
+        self.step += 1
         if self.logdir:
             shutil.copyfile(screenshot_img, os.path.join(self.logdir, 'gemfield_farm_{:06d}.png'.format(self.step)))
 
-        self.step += 1
         print('<========================== scan farm {} times ==========================>'.format(self.step))
         self.monitor = cv2.imread(screenshot_img)
         self.height, self.width = self.monitor.shape[:2]
@@ -252,23 +252,22 @@ class Ant(object):
         print(adb_tap_cmd)
         #enter this friend page
         os.system(adb_tap_cmd)
-        time.sleep(2)
+        time.sleep(3)
         self.scanMonitor()
         for i in range(6):
             rc = self.getIconPos('energy_hand_day_template', 0.9)
-            if rc is None:
-                rc = self.getIconPos('energy_hand_night_template', 0.9)
             if not rc:
                 break
             x,y = rc
-            adb_tap_cmd = 'adb shell input tap {} {}'.format(x, y - 60)
+            adb_tap_cmd = 'adb shell input tap {} {}'.format(x - 50 * self.width / 1080, y - 70 * self.height / 1920)
             print(adb_tap_cmd)
             os.system(adb_tap_cmd)
+            time.sleep(2)
             self.scanMonitor()
         #back
         print(adb_back_cmd)
         os.system(adb_back_cmd)
-        time.sleep(2)
+        time.sleep(3)
         self.scanMonitor()
 
     def playForest(self):
