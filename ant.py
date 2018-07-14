@@ -12,13 +12,16 @@ import platform
 import datetime
 
 current_platform = platform.system()
-TMPLATES_DIR = 'template_icons'
+RESOLUTION = '1080p'
+TMPLATES_DIR = '{}_template_icons'.format(RESOLUTION)
 screenshot_img = '{}/current_gemfield_farm.png'.format(tempfile.gettempdir())
 adb_screenshot_cmd = 'adb exec-out screencap -p > {}'.format(screenshot_img)
 adb_screen_stayon_cmd = 'adb shell svc power stayon usb'
 adb_back_cmd = 'adb shell input keyevent 4'
-minute_candidates = [0,1,20,21,40,41]
-hour_candidates = [0,1,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+farm_minute_candidates = [0,1,20,21,40,41]
+farm_hour_candidates = [0,1,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+forest_hour_candidates = [0,1,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+forest_minute_candidates = [30,31,32]
 
 def errorMsg(str):
     print('Error: {}'.format(str) )
@@ -190,10 +193,10 @@ class Ant(object):
 
     def getMoreFood(self):
         now = datetime.datetime.now()
-        if now.hour not in hour_candidates:
+        if now.hour not in farm_hour_candidates:
             print('Will not get food since the forest time is coming...')
             return
-        if now.minute not in minute_candidates:
+        if now.minute not in farm_minute_candidates:
             print('Will not get food since just did earlier...')
             return
 
@@ -366,7 +369,7 @@ class Antall(Ant):
             counter += 1
             self.playFarm()
             is_breakfast = now.hour == 7 and now.minute <= 35
-            is_snacks = (now.hour <2 or now.hour >= 6) and now.minute <= 2
+            is_snacks = now.hour in forest_hour_candidates and now.minute in forest_minute_candidates
             if is_breakfast or is_snacks or counter == 1:
                 self.back(2)
                 self.playForest()
