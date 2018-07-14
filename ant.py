@@ -60,7 +60,6 @@ class Ant(object):
     def swipe(self, start_x, start_y, end_x, end_y, duration):
         adb_swipe_cmd = 'adb shell input swipe {} {} {} {} {}'.format(start_x, start_y, end_x, end_y, duration)
         os.system(adb_swipe_cmd)
-        time.sleep(1)
 
     def back(self, time_sleep=2):
         os.system(adb_back_cmd)
@@ -112,7 +111,7 @@ class Ant(object):
         return self.match(self.template_dict[template_name], threshold, template_name, is_left)
 
     def checkFarm(self):
-        for i in range(5):
+        for _ in range(5):
             self.scanMonitor()
             #need to close prompt window first
             rc = self.getIconPos('close_donate_icon_template', 0.9)
@@ -205,8 +204,9 @@ class Ant(object):
             print('No friends found')
             return
         self.tap(rc, 'click friend icon')
+        time.sleep(2)
         for _ in range(50):
-            self.scanMonitor(2)
+            self.scanMonitor(0.1)
             rc = self.getIconPos('farm_medal_template', 0.8)
             if not rc:
                 break
@@ -266,18 +266,17 @@ class Ant(object):
     def findMoreFriends(self):
         for i in range(3):
             self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 400 )
-            self.scanMonitor()
+            self.scanMonitor(0.1)
             rc = self.getIconPos('more_friends_template', 0.9)
             if not rc:
                 continue
             self.tap(rc)
-            
-            time.sleep(5)
+            time.sleep(4)
             break
 
     #current screen
     def getEnergy(self):
-        self.scanMonitor()
+        self.scanMonitor(0.1)
         for _ in range(10):
             rc = self.getIconPos('forest_energy_template', 0.9)
             if not rc:
@@ -292,8 +291,7 @@ class Ant(object):
 
     def reapOrHelp(self, rc):
         self.tap(rc)
-        time.sleep(3)
-        self.scanMonitor()
+        self.scanMonitor(3)
         for _ in range(6):
             rc = self.getIconPos('energy_hand_day_template', 0.9)
             rc2 = self.getIconPos('help_reap_template', 0.9)
@@ -308,7 +306,7 @@ class Ant(object):
                 rc = (x-50, y-70)
                 self.tap(rc)
 
-            self.scanMonitor(2)
+            self.scanMonitor(0.5)
 
         self.back(0)
         self.scanMonitor(3)
@@ -317,7 +315,7 @@ class Ant(object):
         self.checkForest()
         self.findMoreFriends()
         count = 0
-        for i in range(30):
+        for _ in range(30):
             self.getEnergy()
             if self.getIconPos('no_friends_template', 0.8):
                 print('end of friends list')
@@ -327,7 +325,7 @@ class Ant(object):
             self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
 
         #back
-        for i in range(5):
+        for _ in range(5):
             self.back(0)
             self.scanMonitor(3)
             rc = self.getIconPos('forest_icon_template', 0.9)
