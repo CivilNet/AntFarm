@@ -17,6 +17,8 @@ screenshot_img = '{}/current_gemfield_farm.png'.format(tempfile.gettempdir())
 adb_screenshot_cmd = 'adb exec-out screencap -p > {}'.format(screenshot_img)
 adb_screen_stayon_cmd = 'adb shell svc power stayon usb'
 adb_back_cmd = 'adb shell input keyevent 4'
+minute_candidates = [0,1,20,21,40,41]
+hour_candidates = [0,1,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 
 def errorMsg(str):
     print('Error: {}'.format(str) )
@@ -26,14 +28,10 @@ def errorMsg(str):
 
 def warningMsg(str):
     print('Warning: {}'.format(str) )
+    return
     if current_platform == 'Linux':
         os.system('wall Warning: {}'.format(str))
     
-def swipe(start_x, start_y, end_x, end_y, duration):
-    adb_swipe_cmd = 'adb shell input swipe {} {} {} {} {}'.format(start_x, start_y, end_x, end_y, duration)
-    os.system(adb_swipe_cmd)
-    time.sleep(1)
-
 def getRandomSleep():
     return random.randint(30,90)
 
@@ -49,6 +47,21 @@ class Ant(object):
 
         if self.logdir and not os.path.isdir(self.logdir):
             os.makedirs(self.logdir)
+
+    def tap(self, rc, msg='tap'):
+        x,y = rc
+        adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
+        print('preparing to {} with {}...'.format(msg, adb_tap_cmd))
+        os.system(adb_tap_cmd)
+
+    def swipe(self, start_x, start_y, end_x, end_y, duration):
+        adb_swipe_cmd = 'adb shell input swipe {} {} {} {} {}'.format(start_x, start_y, end_x, end_y, duration)
+        os.system(adb_swipe_cmd)
+        time.sleep(1)
+
+    def back(self, time_sleep=2):
+        os.system(adb_back_cmd)
+        time.sleep(time_sleep)
 
     def setScreenStayon(self):
         print('preparing to keep screen on...')
@@ -68,7 +81,8 @@ class Ant(object):
                 continue
             self.loadTemplate(icon)
 
-    def scanMonitor(self):
+    def scanMonitor(self, time_sleep=0):
+        time.sleep(time_sleep)
         adb_rc = 1
         try:
             adb_rc = os.system(adb_screenshot_cmd)
@@ -102,25 +116,19 @@ class Ant(object):
             if not rc:
                 rc = self.getIconPos('close_icon_template', 0.8)
             if rc:
-                x,y = rc
-                adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-                os.system(adb_tap_cmd)
+                self.tap(rc)
                 time.sleep(2)
                 continue
             #check crib
-            if self.getIconPos('crib_template', 0.8):
+            if self.getIconPos('crib_template', 0.7):
                 return
             #suppose we are in homepage
             rc = self.getIconPos('ant_farm_icon_template', 0.9)
             if not rc:
-                print(adb_back_cmd)
-                os.system(adb_back_cmd)
-                time.sleep(2)
+                self.back(2)
                 continue
 
-            x,y = rc
-            adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-            os.system(adb_tap_cmd)
+            self.tap(rc)
             time.sleep(8)
         errorMsg('Cannot locate your zhifubao app correctly.')
 
@@ -131,11 +139,8 @@ class Ant(object):
                 print('No thief found...')
                 break
             print('Found thief {}'.format(i))
-            x,y = rc
-            adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-            warningMsg('preparing to expel the thief with {}...'.format(adb_tap_cmd))
-            os.system(adb_tap_cmd)
-            self.scanMonitor()
+            self.tap(rc, 'expel the thief')
+            self.scanMonitor(2)
 
     def match(self, template, threshold, op, is_left=False, thresh=False):
         monitor = cv2.cvtColor(self.monitor, cv2.COLOR_BGR2GRAY)
@@ -161,12 +166,8 @@ class Ant(object):
         if rc is None:
             print('No robber found...')
             return
-        print('Found robber...')
-        x,y = rc
-        adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-        warningMsg('preparing to expel the robber with {}...'.format(adb_tap_cmd))
-        os.system(adb_tap_cmd)
-
+        self.tap(rc, 'expel the robber')
+        
     def feed(self):
         rc = self.getIconPos('indicator_template', 0.8)
         if rc is None:
@@ -177,30 +178,71 @@ class Ant(object):
             return
  
         for i in range(3):
-            self.crib_pos = self.getIconPos('crib_template', 0.8)
+            self.crib_pos = self.getIconPos('crib_template', 0.7)
             if self.crib_pos:
                 break
-            time.sleep(3)
-            self.scanMonitor()
+            self.scanMonitor(3)
 
         if self.crib_pos is None:
             errorMsg('Make sure your screen of phone is on...')
 
-        x,y = self.crib_pos
-        adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-        warningMsg('preparing to feed gemfield chicken with {}...'.format(adb_tap_cmd))
-        os.system(adb_tap_cmd)
+        self.tap(self.crib_pos, 'feed gemfield chicken')
 
-    def backhome(self):
-        print(adb_back_cmd)
-        os.system(adb_back_cmd)
-        time.sleep(2)
+    def getMoreFood(self):
+        now = datetime.datetime.now()
+        if now.hour not in hour_candidates:
+            print('Will not get food since the forest time is coming...')
+            return
+        if now.minute not in minute_candidates:
+            print('Will not get food since just did earlier...')
+            return
+
+        rc = self.getIconPos('farm_friends_template', 0.8)
+        if rc is None:
+            print('No friends found')
+            return
+        self.tap(rc, 'click friend icon')
+        for _ in range(50):
+            self.scanMonitor(2)
+            rc = self.getIconPos('farm_medal_template', 0.8)
+            if not rc:
+                break
+            rc = self.getIconPos('farm_thief_flag_template', 0.8)
+            if not rc:
+                self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 1.5, 600 )
+                continue
+
+            self.getFoodFromFriend(rc)
+        self.back(1)
+
+    def getFoodFromFriend(self, rc):
+        self.tap(rc, 'enter friend page')
+        time.sleep(3)
+        self.scanMonitor()
+
+        rc = self.getIconPos('thief_template', 0.9)
+        if rc:
+            self.notifyFriend(rc)
+        else:
+            rc = self.getIconPos('robber_template', 0.9)
+            if rc:
+                self.notifyFriend(rc)
+        self.back(1)
+
+    def notifyFriend(self,rc):
+        self.tap(rc, 'click the thief/robber')
+        self.scanMonitor(1)
+        rc = self.getIconPos('farm_message_template', 0.9)
+        if not rc:
+            return
+        self.tap(rc, 'send message to friend')
 
     def playFarm(self):
         self.checkFarm()
         self.expelThief()
         self.expelRobber()
         self.feed()
+        self.getMoreFood()
 
     def checkForest(self):
         for i in range(5):
@@ -210,65 +252,63 @@ class Ant(object):
             #suppose we are in homepage
             rc = self.getIconPos('forest_icon_template', 0.9)
             if not rc:
-                print(adb_back_cmd)
-                os.system(adb_back_cmd)
-                time.sleep(2)
+                self.back(2)
                 continue
 
-            x,y = rc
-            adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-                
-            os.system(adb_tap_cmd)
+            self.tap(rc)
             time.sleep(8)
             
         errorMsg('Cannot locate your zhifubao app correctly.')
 
     def findMoreFriends(self):
         for i in range(3):
-            swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 400 )
+            self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 400 )
             self.scanMonitor()
             rc = self.getIconPos('more_friends_template', 0.9)
             if not rc:
                 continue
-            x,y = rc
-            adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-            print(adb_tap_cmd)
-            os.system(adb_tap_cmd)
+            self.tap(rc)
+            
             time.sleep(5)
             break
 
     #current screen
     def getEnergy(self):
         self.scanMonitor()
-        for i in range(10):
+        for _ in range(10):
             rc = self.getIconPos('forest_energy_template', 0.9)
             if not rc:
                 break
-            x,y = rc
-            self.getEnergyFromFriend(x,y)
+            self.reapOrHelp(rc)
 
-    def getEnergyFromFriend(self, x, y):
-        adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-        print(adb_tap_cmd)
-        #enter this friend page
-        os.system(adb_tap_cmd)
-        time.sleep(3)
-        self.scanMonitor()
-        for i in range(6):
-            rc = self.getIconPos('energy_hand_day_template', 0.9)
+        for _ in range(10):
+            rc = self.getIconPos('forest_reap_template', 0.9)
             if not rc:
                 break
-            x,y = rc
-            adb_tap_cmd = 'adb shell input tap {} {}'.format(x - 50 * self.width / 1080, y - 70 * self.height / 1920)
-            print(adb_tap_cmd)
-            os.system(adb_tap_cmd)
-            time.sleep(2)
-            self.scanMonitor()
-        #back
-        print(adb_back_cmd)
-        os.system(adb_back_cmd)
+            self.reapOrHelp(rc)
+
+    def reapOrHelp(self, rc):
+        self.tap(rc)
         time.sleep(3)
         self.scanMonitor()
+        for _ in range(6):
+            rc = self.getIconPos('energy_hand_day_template', 0.9)
+            rc2 = self.getIconPos('help_reap_template', 0.9)
+            if not rc and not rc2:
+                break
+            if rc:
+                x,y = rc
+                rc = (x-50, y-70)
+                self.tap(rc)
+            if rc2:
+                x,y = rc2
+                rc = (x-50, y-70)
+                self.tap(rc)
+
+            self.scanMonitor(2)
+
+        self.back(0)
+        self.scanMonitor(3)
 
     def playForest(self):
         self.checkForest()
@@ -281,14 +321,12 @@ class Ant(object):
                 count += 1
             if count >= 2:
                 break
-            swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
+            self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
 
         #back
         for i in range(5):
-            print(adb_back_cmd)
-            os.system(adb_back_cmd)
-            time.sleep(3)
-            self.scanMonitor()
+            self.back(0)
+            self.scanMonitor(3)
             rc = self.getIconPos('forest_icon_template', 0.9)
             if rc:
                 return
@@ -315,7 +353,7 @@ class Antdefault(Ant):
             self.playFarm()
             is_breakfast = now.hour == 7 and now.minute <= 35
             if is_breakfast or counter == 1:
-                self.backhome()
+                self.back(2)
                 self.playForest()
                 continue
             time.sleep(getRandomSleep())
@@ -330,7 +368,7 @@ class Antall(Ant):
             is_breakfast = now.hour == 7 and now.minute <= 35
             is_snacks = (now.hour <2 or now.hour >= 6) and now.minute <= 2
             if is_breakfast or is_snacks or counter == 1:
-                self.backhome()
+                self.back(2)
                 self.playForest()
                 continue
             time.sleep(getRandomSleep())
