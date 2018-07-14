@@ -43,6 +43,7 @@ class Ant(object):
         self.template_dict = {}
         self.logdir = logdir
         self.step = 0
+        self.have_slept = False
         self.monitor = None
         self.crib_pos = None
         self.initTemplate()
@@ -203,6 +204,7 @@ class Ant(object):
         if rc is None:
             print('No friends found')
             return
+        self.have_slept = True
         self.tap(rc, 'click friend icon')
         time.sleep(2)
         for _ in range(50):
@@ -294,7 +296,7 @@ class Ant(object):
         self.scanMonitor(3)
         for _ in range(6):
             rc = self.getIconPos('energy_hand_day_template', 0.9)
-            rc2 = self.getIconPos('help_reap_template', 0.9)
+            rc2 = self.getIconPos('help_reap_template', 0.8)
             if not rc and not rc2:
                 break
             if rc:
@@ -303,13 +305,13 @@ class Ant(object):
                 self.tap(rc)
             if rc2:
                 x,y = rc2
-                rc = (x-50, y-70)
-                self.tap(rc)
+                rc2 = (x-50, y-70)
+                self.tap(rc2)
 
             self.scanMonitor(0.5)
 
         self.back(0)
-        self.scanMonitor(3)
+        self.scanMonitor(0.1)
 
     def playForest(self):
         self.checkForest()
@@ -343,6 +345,9 @@ class Antfarm(Ant):
     def play(self):
         while True:
             self.playFarm()
+            if self.have_slept:
+                self.have_slept = False
+                continue
             time.sleep(getRandomSleep())
 
 class Antdefault(Ant):
@@ -356,6 +361,9 @@ class Antdefault(Ant):
             if is_breakfast or counter == 1:
                 self.back(2)
                 self.playForest()
+                continue
+            if self.have_slept:
+                self.have_slept = False
                 continue
             time.sleep(getRandomSleep())
 
@@ -371,6 +379,9 @@ class Antall(Ant):
             if is_breakfast or is_snacks or counter == 1:
                 self.back(2)
                 self.playForest()
+                continue
+            if self.have_slept:
+                self.have_slept = False
                 continue
             time.sleep(getRandomSleep())
 
