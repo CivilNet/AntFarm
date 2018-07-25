@@ -20,8 +20,8 @@ adb_screen_stayon_cmd = 'adb shell svc power stayon usb'
 adb_back_cmd = 'adb shell input keyevent 4'
 farm_minute_candidates = [0,1,20,21,40,41]
 farm_hour_candidates = [0,1,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
-forest_hour_candidates = [0,1,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
-forest_minute_candidates = [30,31,32]
+forest_hour_candidates = [0,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+forest_minute_candidates = [30,31]
 
 def errorMsg(str):
     print('Error: {}'.format(str) )
@@ -55,7 +55,7 @@ class Ant(object):
     def tap(self, rc, msg='tap'):
         x,y = rc
         adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-        print('preparing to {} with {}...'.format(msg, adb_tap_cmd))
+        print('TAP {} icon with {}...'.format(msg, adb_tap_cmd))
         os.system(adb_tap_cmd)
 
     def swipe(self, start_x, start_y, end_x, end_y, duration):
@@ -113,13 +113,13 @@ class Ant(object):
 
     def checkFarm(self):
         for _ in range(5):
-            self.scanMonitor()
+            self.scanMonitor(1)
             #need to close prompt window first
             rc = self.getIconPos('close_donate_icon_template', 0.9)
             if not rc:
                 rc = self.getIconPos('close_icon_template', 0.8)
             if rc:
-                self.tap(rc)
+                self.tap(rc, 'close-donate-window')
                 time.sleep(2)
                 continue
             #check crib
@@ -131,7 +131,7 @@ class Ant(object):
                 self.back(2)
                 continue
 
-            self.tap(rc)
+            self.tap(rc, 'enter-self-farm-page')
             time.sleep(8)
         errorMsg('Cannot locate your zhifubao app correctly.')
 
@@ -142,7 +142,7 @@ class Ant(object):
                 print('No thief found...')
                 break
             print('Found thief {}'.format(i))
-            self.tap(rc, 'expel the thief')
+            self.tap(rc, 'expel-the-thief')
             self.scanMonitor(2)
 
     def match(self, template, threshold, op, is_left=False, thresh=False):
@@ -153,7 +153,7 @@ class Ant(object):
         w, h = template.shape[::-1]
         res = cv2.matchTemplate(monitor, template, cv2.TM_CCOEFF_NORMED)
         res_max = res.max()
-        print('{}: {}'.format(op, res_max))
+        print('MATCH {}: {}'.format(op, res_max))
         threshold = max(threshold, res_max)
         loc = np.where( res >= threshold)
         rc = None
@@ -169,7 +169,7 @@ class Ant(object):
         if rc is None:
             print('No robber found...')
             return
-        self.tap(rc, 'expel the robber')
+        self.tap(rc, 'expel-the-robber')
         
     def feed(self):
         rc = self.getIconPos('indicator_template', 0.8)
@@ -189,7 +189,7 @@ class Ant(object):
         if self.crib_pos is None:
             errorMsg('Make sure your screen of phone is on...')
 
-        self.tap(self.crib_pos, 'feed gemfield chicken')
+        self.tap(self.crib_pos, 'feed-gemfield-chicken')
 
     def getMoreFood(self):
         now = datetime.datetime.now()
@@ -205,8 +205,8 @@ class Ant(object):
             print('No friends found')
             return
         self.have_slept = True
-        self.tap(rc, 'click friend icon')
-        time.sleep(2)
+        self.tap(rc, 'farm-friends')
+        time.sleep(4)
         for _ in range(50):
             self.scanMonitor(0.1)
             rc = self.getIconPos('farm_medal_template', 0.8)
@@ -221,9 +221,8 @@ class Ant(object):
         self.back(1)
 
     def getFoodFromFriend(self, rc):
-        self.tap(rc, 'enter friend page')
-        time.sleep(3)
-        self.scanMonitor()
+        self.tap(rc, 'enter-friend-farm-page')
+        self.scanMonitor(5)
 
         rc = self.getIconPos('thief_template', 0.9)
         if rc:
@@ -235,12 +234,12 @@ class Ant(object):
         self.back(1)
 
     def notifyFriend(self,rc):
-        self.tap(rc, 'click the thief/robber')
+        self.tap(rc, 'thief/robber-in-friend-farm')
         self.scanMonitor(1)
         rc = self.getIconPos('farm_message_template', 0.9)
         if not rc:
             return
-        self.tap(rc, 'send message to friend')
+        self.tap(rc, 'send-message-to-friend')
 
     def playFarm(self):
         self.checkFarm()
@@ -250,8 +249,8 @@ class Ant(object):
         self.getMoreFood()
 
     def checkForest(self):
-        for i in range(5):
-            self.scanMonitor()
+        for _ in range(5):
+            self.scanMonitor(0)
             if self.getIconPos('back_from_forest_template', 0.9, is_left=True):
                 return
             #suppose we are in homepage
@@ -260,7 +259,7 @@ class Ant(object):
                 self.back(2)
                 continue
 
-            self.tap(rc)
+            self.tap(rc, 'enter-self-forest-page')
             time.sleep(8)
             
         errorMsg('Cannot locate your zhifubao app correctly.')
@@ -272,7 +271,7 @@ class Ant(object):
             rc = self.getIconPos('more_friends_template', 0.9)
             if not rc:
                 continue
-            self.tap(rc)
+            self.tap(rc, 'check-more-friends')
             time.sleep(4)
             break
 
@@ -292,7 +291,7 @@ class Ant(object):
             self.reapOrHelp(rc)
 
     def reapOrHelp(self, rc):
-        self.tap(rc)
+        self.tap(rc, 'enter-friend-forest-page')
         self.scanMonitor(3)
         for _ in range(6):
             rc = self.getIconPos('energy_hand_day_template', 0.9)
@@ -302,11 +301,11 @@ class Ant(object):
             if rc:
                 x,y = rc
                 rc = (x-50, y-70)
-                self.tap(rc)
+                self.tap(rc, 'energy-hand')
             if rc2:
                 x,y = rc2
                 rc2 = (x-50, y-70)
-                self.tap(rc2)
+                self.tap(rc2, 'helping-heart')
 
             self.scanMonitor(0.5)
 
@@ -382,6 +381,8 @@ class Antall(Ant):
                 continue
             if self.have_slept:
                 self.have_slept = False
+                #back to homepage then reenter
+                self.back(2)
                 continue
             time.sleep(getRandomSleep())
 
