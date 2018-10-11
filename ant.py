@@ -115,6 +115,12 @@ class Ant(object):
     def checkFarm(self):
         for _ in range(5):
             self.scanMonitor(1)
+            #check homepage
+            rc = self.getIconPos('zhifubao_icon_template', 0.9)
+            if rc:
+                self.tap(rc, 'launch zhifubao app')
+                time.sleep(5)
+                continue
             #check update notification
             rc = self.getIconPos('update_template', 0.9)
             if rc:
@@ -273,11 +279,11 @@ class Ant(object):
 
     def checkForest(self):
         for _ in range(5):
-            self.scanMonitor(0)
+            self.scanMonitor(1)
             if self.getIconPos('back_from_forest_template', 0.9, is_left=True):
                 return
             #suppose we are in homepage
-            rc = self.getIconPos('forest_icon_template', 0.9)
+            rc = self.getIconPos('forest_icon_template', 0.8)
             if not rc:
                 self.back(2)
                 continue
@@ -355,6 +361,12 @@ class Ant(object):
             rc = self.getIconPos('forest_icon_template', 0.9)
             if rc:
                 return
+            #check homepage
+            rc = self.getIconPos('zhifubao_icon_template', 0.9)
+            if rc:
+                self.tap(rc, 'launch zhifubao app')
+                time.sleep(5)
+                continue
         errorMsg('Could not back to Zhifubao homepage.')
 
 class Antforest(Ant):
