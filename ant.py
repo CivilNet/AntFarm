@@ -323,7 +323,7 @@ class Ant(object):
         self.tap(rc, 'enter-friend-forest-page')
         self.scanMonitor(3)
         for _ in range(6):
-            rc = self.getIconPos('energy_hand_day_template', 0.9)
+            rc = self.getIconPos('energy_hand_day_template', 0.8)
             rc2 = self.getIconPos('help_reap_template', 0.8)
             if not rc and not rc2:
                 break
