@@ -103,7 +103,7 @@ class Ant(object):
         if self.logdir:
             shutil.copyfile(screenshot_img, os.path.join(self.logdir, 'gemfield_farm_{:06d}.png'.format(self.step)))
 
-        print('<========================== scan farm {} times ==========================>'.format(self.step))
+        print('<======= scan farm {} times on {} ========>'.format(self.step, datetime.datetime.now()))
         self.monitor = cv2.imread(screenshot_img)
         self.height, self.width = self.monitor.shape[:2]
         #delete the image
@@ -136,7 +136,7 @@ class Ant(object):
                 time.sleep(2)
                 continue
             #check crib
-            if self.getIconPos('crib_template', 0.7):
+            if self.getIconPos('crib_template', 0.9):
                 return
             #suppose we are in homepage
             rc = self.getIconPos('ant_farm_icon_template', 0.9)
