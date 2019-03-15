@@ -338,14 +338,14 @@ class Ant(object):
 
             self.scanMonitor(0.5)
 
-        self.back(0)
+        self.back(1)
         self.scanMonitor(0.1)
 
     def playForest(self):
         self.checkForest()
         self.findMoreFriends()
         count = 0
-        for _ in range(30):
+        for _ in range(40):
             self.getEnergy()
             if self.getIconPos('no_friends_template', 0.8):
                 print('end of friends list')
@@ -356,7 +356,7 @@ class Ant(object):
 
         #back
         for _ in range(5):
-            self.back(0)
+            self.back(1)
             self.scanMonitor(3)
             rc = self.getIconPos('forest_icon_template', 0.9)
             if rc:
