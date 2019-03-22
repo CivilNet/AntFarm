@@ -338,7 +338,7 @@ class Ant(object):
 
             self.scanMonitor(0.5)
 
-        self.back(1)
+        self.back(0)
         self.scanMonitor(0.1)
 
     def playForest(self):
