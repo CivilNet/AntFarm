@@ -12,8 +12,7 @@ import platform
 import datetime
 
 current_platform = platform.system()
-RESOLUTION = '1080p'
-TMPLATES_DIR = '{}_template_icons'.format(RESOLUTION)
+TMPLATES_DIR = '{}_template_icons'.format('not_exist')
 screenshot_img = '{}/current_gemfield_farm.png'.format(tempfile.gettempdir())
 adb_screenshot_cmd = 'adb exec-out screencap -p > {}'.format(screenshot_img)
 adb_screen_stayon_cmd = 'adb shell svc power stayon usb'
@@ -295,9 +294,9 @@ class Ant(object):
         errorMsg('Cannot locate your zhifubao app correctly.')
 
     def findMoreFriends(self):
-        for i in range(3):
+        for i in range(5):
             self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 400 )
-            self.scanMonitor(0.1)
+            self.scanMonitor(0.5)
             rc = self.getIconPos('more_friends_template', 0.9)
             if not rc:
                 continue
@@ -427,9 +426,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--logdir', default=None, type=str, help='You should specify the log dir.')
     parser.add_argument('--mode', default='default', type=str, help='There have 4 modes: forest|farm|default|all')
+    parser.add_argument('--template', default='meizumax', type=str, help='specify various mobile phone template dir')
     args = parser.parse_args()
     if args.mode not in ['default','farm','forest','all']:
         errorMsg('Usage: {} --mode <forest|farm|default|all>'.format(sys.argv[0]))
+
+    TMPLATES_DIR = '{}_template_icons'.format(args.template)
 
     ant = eval('Ant{}'.format(args.mode))(args.logdir)
     ant.play()

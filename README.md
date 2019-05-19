@@ -16,6 +16,7 @@
 - 使用下面的命令开始养鸡种树：`python ant.py` 。这将会使用default模式来开始养鸡种树；
 - AntFarm支持4种模式(使用--mode指定)：farm,forest,default,all
 
+## 4种模式
 #### default模式
 这种模式下，AntFarm在启动的时候会去检查蚂蚁庄园和蚂蚁森林，然后在7:00AM ~ 7:35AM之间会不断检查蚂蚁森林，其它时间都在蚂蚁庄园：`python ant.py` 或者 `python ant.py --mode default`。
 #### farm模式
@@ -25,6 +26,21 @@
 #### all模式
 这种模式下，AntFarm在启动的时候会去检查蚂蚁庄园和蚂蚁森林，然后在整点的时候会检查蚂蚁森林，其它时间都在检查蚂蚁庄园：`python ant.py --mode all`。
 这种模式也是Gemfield最常用的模式。
+
+## 模板
+因为使用的是opencv的template模板匹配算法，因此需要为不同的手机定制不同的模板icons。目前该项目已经注册了如下型号的模板：
+- 魅族魅蓝Max（默认）；
+- 三星Galaxy s6 edge+；
+
+使用-template参数来指定要使用的模板，比如要使用s6 edge plus手机，则使用命令：
+`python ant.py --mode all --template s6edgeplus`
+
+由于魅蓝Max为默认设备，因此
+`python ant.py --mode all`
+等价于
+`python ant.py --mode all --template meizumax`
+
+当然你可以制作自己的模板。
 
 # 如何在个人电脑上配置ADB
 ## Linux
@@ -38,7 +54,7 @@
 - 解压到自己指定的目录，并添加该目录到PATH环境变量中。
 
 ## macOS
-没试过，原理应该类似。
+同Linux、Windows，安装adb、python等必备依赖。已经在macOS上测试过。
 
 # 已知问题
 - 只在1080p分辨率的手机上进行测试过，其他分辨率的手机可能需要调整对应的置信度，或者重新注册一套icon模板；
@@ -47,3 +63,4 @@
 - 基于adb的原理使得程序运行依赖个人电脑，不够灵活，谁能改变这个现状，发100块钱红包；
 - 手机不能息屏，程序运行费电，不够环保，深感内疚，谁最先能解决这个问题，发100块钱红包；
 - 目前没有在Linux或Windows PC上支持iPhone的轻量级（至少达到adb水平）的优雅的解决方案，谁能解决这个问题，发100块钱红包。
+- 不使用神经网络模型的情况下，如何使得一套模板icons适用几乎所有安卓型号手机；
