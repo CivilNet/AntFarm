@@ -113,7 +113,7 @@ class Ant(object):
         return self.match(self.template_dict[template_name], threshold, template_name, is_left)
 
     def checkFarm(self):
-        for _ in range(5):
+        for _ in range(500):
             self.scanMonitor(1)
             #check homepage
             rc = self.getIconPos('zhifubao_icon_template', 0.9)
@@ -201,15 +201,18 @@ class Ant(object):
         self.scanMonitor(2)
         
     def feed(self):
-        rc = self.getIconPos('indicator_template', 0.8)
+        rc = self.getIconPos('indicator_template', 0.9)
         if rc is None:
             rc = self.getIconPos('double_indicator_template', 0.8)
+        else:
+            print('try to use accelerate card...')
+            self.useAccelerateCard()
         #still has food left
         if rc:
             print('Still has food left...')
             return
  
-        for i in range(3):
+        for _ in range(3):
             self.crib_pos = self.getIconPos('crib_template', 0.7)
             if self.crib_pos:
                 break
@@ -278,7 +281,7 @@ class Ant(object):
         self.getMoreFood()
 
     def checkForest(self):
-        for _ in range(5):
+        for _ in range(500):
             self.scanMonitor(1)
             if self.getIconPos('back_from_forest_template', 0.9, is_left=True):
                 return
@@ -341,6 +344,34 @@ class Ant(object):
         self.back(0)
         self.scanMonitor(0.1)
 
+    def useAccelerateCard(self):
+        rc = self.getIconPos('tools_icon_template', 0.8)
+        if not rc:
+            print("Impossible: but cannot find tools icon.")
+            return
+        
+        self.tap(rc, 'click-tools-icon')
+        self.scanMonitor(0.5)
+        rc = self.getIconPos('accelerate_card_template', 0.8)
+        if not rc:
+            print("Impossible: but cannot find accelerate card icon.")
+            return
+
+        self.tap(rc, 'click-accelerate-card')
+        self.scanMonitor(0.5)
+
+        #1 has no card
+        #2 already used
+        #3 has card
+        rc = self.getIconPos('use_accelerate_card_template', 0.9)
+        if rc:
+            self.tap(rc, 'click use_accelerate_card')
+            time.sleep(5)
+        else:
+            print("You cannot use accelerate card for now!")
+
+        self.backToFarm()
+
     def playForest(self):
         self.checkForest()
         self.findMoreFriends()
@@ -351,14 +382,18 @@ class Ant(object):
                 break
             self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
 
-        #back
+        if self.backToHome():
+            return
+        errorMsg('Could not back to Zhifubao homepage.')
+
+    def backToHome(self):
         for _ in range(6):
             self.scanMonitor(0.5)
             #check app homepage
             rc = self.getIconPos('forest_icon_template', 0.9)
             if rc:
                 print("We have back to alipay homepage...")
-                return
+                return True
 
             #check android homepage
             rc = self.getIconPos('zhifubao_icon_template', 0.9)
@@ -368,7 +403,32 @@ class Ant(object):
                 continue
             #tap back
             self.back(1)
-        errorMsg('Could not back to Zhifubao homepage.')
+
+        return False
+
+    def backToFarm(self):
+        for _ in range(6):
+            self.scanMonitor(0.5)
+            rc = self.getIconPos('crib_template', 0.9)
+            if rc:
+                print("We have back to ant farm applet homepage...")
+                return True
+            #check app homepage
+            rc = self.getIconPos('ant_farm_icon_template', 0.9)
+            if rc:
+                self.tap(rc, 'enter ant farm applet')
+                time.sleep(5)
+                continue
+
+            #check android homepage
+            rc = self.getIconPos('zhifubao_icon_template', 0.9)
+            if rc:
+                self.tap(rc, 'launch zhifubao app')
+                time.sleep(5)
+                continue
+            #tap back
+            self.back(1)
+        return False
 
 class Antforest(Ant):
     def play(self):
