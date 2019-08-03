@@ -351,14 +351,14 @@ class Ant(object):
             return
         
         self.tap(rc, 'click-tools-icon')
-        self.scanMonitor(0.5)
+        self.scanMonitor(3)
         rc = self.getIconPos('accelerate_card_template', 0.8)
         if not rc:
             print("Impossible: but cannot find accelerate card icon.")
             return
 
         self.tap(rc, 'click-accelerate-card')
-        self.scanMonitor(0.5)
+        self.scanMonitor(2)
 
         #1 has no card
         #2 already used
@@ -366,7 +366,7 @@ class Ant(object):
         rc = self.getIconPos('use_accelerate_card_template', 0.9)
         if rc:
             self.tap(rc, 'click use_accelerate_card')
-            time.sleep(5)
+            time.sleep(10)
         else:
             print("You cannot use accelerate card for now!")
 
