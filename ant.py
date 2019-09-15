@@ -1,47 +1,32 @@
+#! /usr/bin/env python
 import os
-import sys
-import shutil
+import subprocess
 import argparse
 import cv2
 import time
 import random
 import numpy as np
-import time
-import tempfile
-import platform
 import datetime
 
-current_platform = platform.system()
-TMPLATES_DIR = '{}_template_icons'.format('not_exist')
-screenshot_img = '{}/current_gemfield_farm.png'.format(tempfile.gettempdir())
-adb_screenshot_cmd = 'adb exec-out screencap -p > {}'.format(screenshot_img)
-adb_screen_stayon_cmd = 'adb shell svc power stayon usb'
-adb_back_cmd = 'adb shell input keyevent 4'
+adb_input = ['adb', 'shell', 'input']
+adb_screen_stayon_cmd = ['adb', 'shell', 'svc', 'power', 'stayon', 'usb']
+adb_back_cmd = adb_input + ['keyevent', '4']
 farm_minute_candidates = [0,1,20,21,40,41]
-#farm_minute_candidates = [61]
 farm_hour_candidates = [0,1,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 forest_hour_candidates = [0,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 forest_minute_candidates = [30,31]
 
 def errorMsg(str):
-    print('Error: {}'.format(str) )
-    if current_platform == 'Linux':
-        os.system('wall Error: {}'.format(str))
-    sys.exit(1)
+    raise Exception('Error: {}'.format(str))
 
-def warningMsg(str):
-    print('Warning: {}'.format(str) )
-    return
-    if current_platform == 'Linux':
-        os.system('wall Warning: {}'.format(str))
-    
-def getRandomSleep():
-    return random.randint(30,90)
+def randSleep():
+    time.sleep(random.randint(30,90))
 
 class Ant(object):
-    def __init__(self, logdir):
+    def __init__(self, logdir, templatesdir):
         self.template_dict = {}
         self.logdir = logdir
+        self.templatesdir  = templatesdir
         self.step = 0
         self.have_slept = False
         self.monitor = None
@@ -52,27 +37,50 @@ class Ant(object):
         if self.logdir and not os.path.isdir(self.logdir):
             os.makedirs(self.logdir)
 
-    def tap(self, rc, msg='tap'):
-        x,y = rc
-        adb_tap_cmd = 'adb shell input tap {} {}'.format(x,y)
-        print('TAP {} icon with {}...'.format(msg, adb_tap_cmd))
-        os.system(adb_tap_cmd)
+    def launchAlipay(self, retry):
+        subprocess.run(['adb', 'shell',
+            'am', 'start', '-S', 'com.eg.android.AlipayGphone/.AlipayLogin'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(5+retry)
+        for _ in range(5):
+            self.scanMonitor(1)
+            #check homepage
+            if (self.getIconPos('ant_farm_icon_template', 0.9)
+            and self.getIconPos('forest_icon_template', 0.9)):
+                return
+            #check update notification
+            rc = self.getIconPos('update_template', 0.9)
+            if rc:
+                self.tap(rc, 'close-update-notification')
+                continue
+            #need to close prompt window first
+            rc = self.getIconPos('close_donate_icon_template', 0.9)
+            if not rc:
+                rc = self.getIconPos('close_icon_template', 0.8)
+            if rc:
+                self.tap(rc, 'close-donate-window', 2)
+
+    def tap(self, rc, msg='tap', time_sleep=5):
+        adb_tap_cmd = adb_input + ['tap', '{} {}'.format(*rc)]
+        print('TAP {} icon with {} + {}s sleep'.format(msg, adb_tap_cmd, time_sleep))
+        subprocess.run(adb_tap_cmd)
+        time.sleep(time_sleep)
 
     def swipe(self, start_x, start_y, end_x, end_y, duration):
-        adb_swipe_cmd = 'adb shell input swipe {} {} {} {} {}'.format(start_x, start_y, end_x, end_y, duration)
-        os.system(adb_swipe_cmd)
+        adb_swipe_cmd = adb_input + ['swipe', '{} {} {} {} {}'.format(start_x, start_y, end_x, end_y, duration)]
+        subprocess.run(adb_swipe_cmd)
 
     def back(self, time_sleep=2):
         print("back and sleep {} seconds...".format(time_sleep))
-        os.system(adb_back_cmd)
+        subprocess.run(adb_back_cmd)
         time.sleep(time_sleep)
 
     def setScreenStayon(self):
         print('preparing to keep screen on...')
-        os.system(adb_screen_stayon_cmd)
+        subprocess.run(adb_screen_stayon_cmd)
 
     def loadTemplate(self, icon):
-        icon_path = os.path.join(TMPLATES_DIR, icon)
+        icon_path = os.path.join(self.templatesdir, icon)
         rc = cv2.imread(icon_path, 0)
         if rc is None:
             errorMsg('Template {} not exist.'.format(icon_path))
@@ -80,72 +88,40 @@ class Ant(object):
         self.template_dict[template_key] = rc
 
     def initTemplate(self):
-        for icon in os.listdir(TMPLATES_DIR):
+        for icon in os.listdir(self.templatesdir):
             if not icon.endswith('.png'):
                 continue
             self.loadTemplate(icon)
 
-    def scanMonitor(self, time_sleep=0):
+    def scanMonitor(self, time_sleep=2):
         time.sleep(time_sleep)
-        adb_rc = 1
         try:
-            adb_rc = os.system(adb_screenshot_cmd)
+            bImg = subprocess.check_output(["adb", "shell", "screencap", "-p"])
+            self.monitor = cv2.imdecode(np.frombuffer(bImg, np.uint8), 0)
+            assert self.monitor is not None
+            print('<======= scan farm {} times on {} ========>'.format(self.step, datetime.datetime.now()))
+            self.step += 1
+            self.height, self.width = self.monitor.shape[:2]
+            if self.logdir:
+                cv2.imwrite(os.path.join(self.logdir, 'gemfield_farm_{:06d}.png'.format(self.step)),
+                        self.monitor)
         except Exception as e:
             errorMsg('Check the phone connection with computer. Detail: {}'.str(e))
-
-        if adb_rc != 0:
-            errorMsg('Check the phone connection with computer.')
-
-        if not os.path.isfile(screenshot_img):
-            errorMsg('Could not take a screenshot from adb command. Check your phone connection with computer.')
-
-        self.step += 1
-        if self.logdir:
-            shutil.copyfile(screenshot_img, os.path.join(self.logdir, 'gemfield_farm_{:06d}.png'.format(self.step)))
-
-        print('<======= scan farm {} times on {} ========>'.format(self.step, datetime.datetime.now()))
-        self.monitor = cv2.imread(screenshot_img)
-        self.height, self.width = self.monitor.shape[:2]
-        #delete the image
-        os.remove(screenshot_img)
 
     def getIconPos(self, template_name, threshold, is_left=False):
         return self.match(self.template_dict[template_name], threshold, template_name, is_left)
 
     def checkFarm(self):
-        for _ in range(500):
+        for i in range(5):
             self.scanMonitor(1)
-            #check homepage
-            rc = self.getIconPos('zhifubao_icon_template', 0.9)
-            if rc:
-                self.tap(rc, 'launch zhifubao app')
-                time.sleep(5)
-                continue
-            #check update notification
-            rc = self.getIconPos('update_template', 0.9)
-            if rc:
-                self.tap(rc, 'close-update-notification')
-                time.sleep(2)
-                continue
-            #need to close prompt window first
-            rc = self.getIconPos('close_donate_icon_template', 0.9)
-            if not rc:
-                rc = self.getIconPos('close_icon_template', 0.8)
-            if rc:
-                self.tap(rc, 'close-donate-window')
-                time.sleep(2)
-                continue
-            #check crib
             if self.getIconPos('crib_template', 0.9):
                 return
             #suppose we are in homepage
             rc = self.getIconPos('ant_farm_icon_template', 0.9)
-            if not rc:
-                self.back(2)
-                continue
-
-            self.tap(rc, 'enter-self-farm-page')
-            time.sleep(8)
+            if rc:
+                self.tap(rc, 'enter-self-farm-page', 8)
+            else:
+                self.launchAlipay(i)
         errorMsg('Cannot locate your zhifubao app correctly.')
 
     def expelThief(self):
@@ -156,23 +132,22 @@ class Ant(object):
                 break
             print('Found thief {}'.format(i))
             self.tap(rc, 'expel-the-thief')
-            self.scanMonitor(2)
+            self.scanMonitor()
 
             rc = self.getIconPos('please_leave_me_alone_template', 0.8)
             if rc is None:
                 print('No please_leave_me_alone_template found...')
                 continue
             self.tap(rc, 'please_leave_me_alone_template')
-            self.scanMonitor(2)
-            
+            self.scanMonitor()
+
 
     def match(self, template, threshold, op, is_left=False, thresh=False):
-        monitor = cv2.cvtColor(self.monitor, cv2.COLOR_BGR2GRAY)
         if thresh:
-            monitor = cv2.adaptiveThreshold(monitor,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
-            cv2.imwrite('gemfield_{}.jpg'.format(self.step),monitor)
+            cv2.imwrite('gemfield_{}.jpg'.format(self.step),
+                cv2.adaptiveThreshold(self.monitor,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2))
         w, h = template.shape[::-1]
-        res = cv2.matchTemplate(monitor, template, cv2.TM_CCOEFF_NORMED)
+        res = cv2.matchTemplate(self.monitor, template, cv2.TM_CCOEFF_NORMED)
         res_max = res.max()
         print('MATCH {}: {}'.format(op, res_max))
         threshold = max(threshold, res_max)
@@ -191,15 +166,15 @@ class Ant(object):
             print('No robber found...')
             return
         self.tap(rc, 'expel-the-robber')
-        self.scanMonitor(2)
+        self.scanMonitor()
 
         rc = self.getIconPos('please_leave_me_alone_template', 0.8)
         if rc is None:
             print('No please_leave_me_alone_template found...')
             return
         self.tap(rc, 'please_leave_me_alone_template')
-        self.scanMonitor(2)
-        
+        self.scanMonitor()
+
     def feed(self):
         rc = self.getIconPos('indicator_template', 0.9)
         if rc is None:
@@ -211,7 +186,7 @@ class Ant(object):
         if rc:
             print('Still has food left...')
             return
- 
+
         for _ in range(3):
             self.crib_pos = self.getIconPos('crib_template', 0.7)
             if self.crib_pos:
@@ -238,7 +213,6 @@ class Ant(object):
             return
         self.have_slept = True
         self.tap(rc, 'farm-friends')
-        time.sleep(4)
         for _ in range(50):
             self.scanMonitor(0.1)
             rc = self.getIconPos('farm_medal_template', 0.8)
@@ -246,7 +220,7 @@ class Ant(object):
                 break
             rc = self.getIconPos('farm_thief_flag_template', 0.8)
             if not rc:
-                self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 1.5, 600 )
+                self.swipe(self.width // 2, self.height - 250, self.width // 2, self.height // 2, 600 )
                 continue
 
             self.getFoodFromFriend(rc)
@@ -281,31 +255,36 @@ class Ant(object):
         self.getMoreFood()
 
     def checkForest(self):
-        for _ in range(500):
+        for i in range(5):
             self.scanMonitor(1)
             if self.getIconPos('back_from_forest_template', 0.9, is_left=True):
                 return
             #suppose we are in homepage
             rc = self.getIconPos('forest_icon_template', 0.8)
-            if not rc:
-                self.back(2)
-                continue
-
-            self.tap(rc, 'enter-self-forest-page')
-            time.sleep(8)
-            
+            if rc:
+                self.tap(rc, 'enter-self-forest-page', 8)
+            else:
+                self.launchAlipay(i)
         errorMsg('Cannot locate your zhifubao app correctly.')
 
     def findMoreFriends(self):
         for i in range(5):
-            self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 400 )
+            self.swipe(self.width // 2, self.height - 250, self.width // 2, self.height // 2, 400 )
             self.scanMonitor(0.5)
             rc = self.getIconPos('more_friends_template', 0.9)
             if not rc:
                 continue
             self.tap(rc, 'check-more-friends')
-            time.sleep(4)
             break
+
+    def getOwnEnergy(self):
+        for _ in range(10):
+            self.scanMonitor(0.5)
+            rc = self.getIconPos('energy_hand_day_template', 0.7)
+            if rc:
+                self.tap(np.subtract(rc, (50,70)), 'energy-hand')
+            else:
+                break
 
     #current screen
     def getEnergy(self):
@@ -331,13 +310,9 @@ class Ant(object):
             if not rc and not rc2:
                 break
             if rc:
-                x,y = rc
-                rc = (x-50, y-70)
-                self.tap(rc, 'energy-hand')
+                self.tap(np.subtract(rc, (50,70)), 'energy-hand')
             if rc2:
-                x,y = rc2
-                rc2 = (x-50, y-70)
-                self.tap(rc2, 'helping-heart')
+                self.tap(np.subtract(rc2, (50,70)), 'helping-heart')
 
             self.scanMonitor(0.5)
 
@@ -349,7 +324,7 @@ class Ant(object):
         if not rc:
             print("Impossible: but cannot find tools icon.")
             return
-        
+
         self.tap(rc, 'click-tools-icon')
         self.scanMonitor(3)
         rc = self.getIconPos('accelerate_card_template', 0.8)
@@ -358,56 +333,50 @@ class Ant(object):
             return
 
         self.tap(rc, 'click-accelerate-card')
-        self.scanMonitor(2)
+        self.scanMonitor()
 
         #1 has no card
         #2 already used
         #3 has card
         rc = self.getIconPos('use_accelerate_card_template', 0.9)
         if rc:
-            self.tap(rc, 'click use_accelerate_card')
-            time.sleep(10)
+            self.tap(rc, 'click use_accelerate_card', 10)
         else:
             print("You cannot use accelerate card for now!")
 
-        self.backToFarm()
+        if self.backToFarm():
+            return
+        errorMsg('Could not back to Zhifubao homepage.')
 
     def playForest(self):
         self.checkForest()
+        self.getOwnEnergy()
         self.findMoreFriends()
         for _ in range(40):
             self.getEnergy()
             if self.getIconPos('no_friends_template', 0.8):
                 print('end of friends list')
                 break
-            self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
+            self.swipe(self.width // 2, self.height - 250, self.width // 2, self.height // 2, 500)
 
         if self.backToHome():
             return
         errorMsg('Could not back to Zhifubao homepage.')
 
     def backToHome(self):
-        for _ in range(6):
+        for i in range(6):
             self.scanMonitor(0.5)
             #check app homepage
             rc = self.getIconPos('forest_icon_template', 0.9)
             if rc:
-                print("We have back to alipay homepage...")
+                print("Back at alipay homepage...")
                 return True
-
-            #check android homepage
-            rc = self.getIconPos('zhifubao_icon_template', 0.9)
-            if rc:
-                self.tap(rc, 'launch zhifubao app')
-                time.sleep(5)
-                continue
-            #tap back
-            self.back(1)
+            self.launchAlipay(i)
 
         return False
 
     def backToFarm(self):
-        for _ in range(6):
+        for i in range(6):
             self.scanMonitor(0.5)
             rc = self.getIconPos('crib_template', 0.9)
             if rc:
@@ -417,24 +386,15 @@ class Ant(object):
             rc = self.getIconPos('ant_farm_icon_template', 0.9)
             if rc:
                 self.tap(rc, 'enter ant farm applet')
-                time.sleep(5)
-                continue
-
-            #check android homepage
-            rc = self.getIconPos('zhifubao_icon_template', 0.9)
-            if rc:
-                self.tap(rc, 'launch zhifubao app')
-                time.sleep(5)
-                continue
-            #tap back
-            self.back(1)
+            else:
+                launchAlipay(i)
         return False
 
 class Antforest(Ant):
     def play(self):
         while True:
             self.playForest()
-            time.sleep(getRandomSleep())
+            randSleep()
 
 class Antfarm(Ant):
     def play(self):
@@ -443,7 +403,7 @@ class Antfarm(Ant):
             if self.have_slept:
                 self.have_slept = False
                 continue
-            time.sleep(getRandomSleep())
+            randSleep()
 
 class Antdefault(Ant):
     def play(self):
@@ -454,13 +414,13 @@ class Antdefault(Ant):
             self.playFarm()
             is_breakfast = now.hour == 7 and now.minute <= 35
             if is_breakfast or counter == 1:
-                self.back(2)
+                self.back()
                 self.playForest()
                 continue
             if self.have_slept:
                 self.have_slept = False
                 continue
-            time.sleep(getRandomSleep())
+            randSleep()
 
 class Antall(Ant):
     def play(self):
@@ -472,26 +432,30 @@ class Antall(Ant):
             is_breakfast = now.hour == 7 and now.minute <= 35
             is_snacks = now.hour in forest_hour_candidates and now.minute in forest_minute_candidates
             if is_breakfast or is_snacks or counter == 1:
-                self.back(2)
+                self.back()
                 self.playForest()
                 continue
             if self.have_slept:
                 self.have_slept = False
                 #back to homepage then reenter
-                self.back(2)
+                self.back()
                 continue
-            time.sleep(getRandomSleep())
+            randSleep()
 
 if __name__ == "__main__":
+    MODE_MAP = {'default': Antdefault,
+                'farm': Antfarm,
+                'forest': Antforest,
+                'all': Antall}
     parser = argparse.ArgumentParser()
-    parser.add_argument('--logdir', default=None, type=str, help='You should specify the log dir.')
-    parser.add_argument('--mode', default='default', type=str, help='There have 4 modes: forest|farm|default|all')
-    parser.add_argument('--template', default='meizumax', type=str, help='specify various mobile phone template dir')
+    parser.add_argument('--logdir', default=None, type=str,
+            help='dir to save screenshot logs')
+    parser.add_argument('--mode', default='default', type=str,
+            choices=MODE_MAP.keys(), help='4 running modes ("default" if unspecified)')
+    parser.add_argument('--template', default='meizumax', type=str,
+            help='dir for templates')
     args = parser.parse_args()
-    if args.mode not in ['default','farm','forest','all']:
-        errorMsg('Usage: {} --mode <forest|farm|default|all>'.format(sys.argv[0]))
 
-    TMPLATES_DIR = '{}_template_icons'.format(args.template)
-
-    ant = eval('Ant{}'.format(args.mode))(args.logdir)
+    ant = MODE_MAP[args.mode](args.logdir,
+            '{}_template_icons'.format(args.template))
     ant.play()
