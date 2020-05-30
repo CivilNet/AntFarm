@@ -113,7 +113,7 @@ class Ant(object):
         return self.match(self.template_dict[template_name], threshold, template_name, is_left)
 
     def checkFarm(self):
-        for _ in range(500):
+        for _ in range(5000):
             self.scanMonitor(1)
             #check homepage
             rc = self.getIconPos('zhifubao_icon_template', 0.9)
