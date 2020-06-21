@@ -283,6 +283,28 @@ class Ant(object):
     def checkForest(self):
         for _ in range(500):
             self.scanMonitor(1)
+####
+            #check homepage
+            rc = self.getIconPos('zhifubao_icon_template', 0.9)
+            if rc:
+                self.tap(rc, 'launch zhifubao app')
+                time.sleep(5)
+                continue
+            #check update notification
+            rc = self.getIconPos('update_template', 0.9)
+            if rc:
+                self.tap(rc, 'close-update-notification')
+                time.sleep(2)
+                continue
+            #need to close prompt window first
+            rc = self.getIconPos('close_donate_icon_template', 0.9)
+            if not rc:
+                rc = self.getIconPos('close_icon_template', 0.8)
+            if rc:
+                self.tap(rc, 'close-donate-window')
+                time.sleep(2)
+                continue
+####
             if self.getIconPos('back_from_forest_template', 0.9, is_left=True):
                 return
             #suppose we are in homepage
