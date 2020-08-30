@@ -18,8 +18,7 @@ adb_screenshot_cmd = 'adb exec-out screencap -p > {}'.format(screenshot_img)
 adb_screen_stayon_cmd = 'adb shell svc power stayon usb'
 adb_back_cmd = 'adb shell input keyevent 4'
 farm_minute_candidates = [0,1,20,21,30,40,41]
-#farm_minute_candidates = [61]
-farm_hour_candidates = [0,1,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
+farm_hour_candidates = [0,1,2,3,4,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 forest_hour_candidates = [0,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 forest_minute_candidates = [30,31]
 
