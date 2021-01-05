@@ -343,6 +343,13 @@ class Ant(object):
                 break
             self.reapOrHelp(rc)
 
+    def reapNotice(self):
+        self.scanMonitor(0.5)
+        rc = self.getIconPos('help_reap_notification_template', 0.8)
+        if not rc:
+            return
+        self.tap(rc, 'help-reap-notification')
+
     def reapOrHelp(self, rc):
         self.tap(rc, 'enter-friend-forest-page')
         self.scanMonitor(3)
@@ -359,7 +366,7 @@ class Ant(object):
                 x,y = rc2
                 rc2 = (x-50, y-70)
                 self.tap(rc2, 'helping-heart')
-
+                self.reapNotice()
             self.scanMonitor(0.5)
 
         self.back(0)
