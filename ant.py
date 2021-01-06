@@ -364,7 +364,7 @@ class Ant(object):
                 self.tap(rc, 'energy-hand')
             if rc2:
                 x,y = rc2
-                rc2 = (x-50, y-70)
+                rc2 = (x+40, y+40)
                 self.tap(rc2, 'helping-heart')
                 self.reapNotice()
             self.scanMonitor(0.5)
