@@ -200,15 +200,25 @@ class Ant(object):
         self.scanMonitor(2)
         
     def feed(self):
+        rc2 = self.getIconPos('double_indicator_template', 0.75)
+        if rc2:
+            print('Still using double hand to eat food...')
+            return
+
+        rc2 = self.getIconPos('small_double_indicator_template', 0.75)
+        if rc2:
+            print('Though has guest in home, still using double hand to eat food...')
+            return 
+
+        rc2 = self.getIconPos('small_double_indicator2_template', 0.75)
+        if rc2:
+            print('Though has guest in home, still using double hand to eat food...')
+            return
+
         rc = self.getIconPos('indicator_template', 0.9)
-        if rc is None:
-            rc = self.getIconPos('double_indicator_template', 0.8)
-        else:
+        if rc:
             print('try to use accelerate card...')
             self.useAccelerateCard()
-        #still has food left
-        if rc:
-            print('Still has food left...')
             return
  
         for _ in range(3):
