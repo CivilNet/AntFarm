@@ -10,6 +10,17 @@ import time
 import tempfile
 import platform
 import datetime
+import json
+import urllib.request
+from config import *
+
+ENABLE_ALIYUN_OSS=True
+#pip install oss2
+try:
+    import oss2
+except:
+    print("Note: you have no oss2 installed, disable notification function")
+    ENABLE_ALIYUN_OSS=False
 
 current_platform = platform.system()
 TMPLATES_DIR = '{}_template_icons'.format('not_exist')
@@ -22,17 +33,59 @@ farm_hour_candidates = [0,1,2,3,4,5,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,2
 forest_hour_candidates = [0,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]
 forest_minute_candidates = [30,31]
 
-def errorMsg(str):
-    print('Error: {}'.format(str) )
-    if current_platform == 'Linux':
-        os.system('wall Error: {}'.format(str))
+def upload2oss(local_path):
+    oss_url = None
+    if not ENABLE_ALIYUN_OSS:
+        return oss_url
+
+    oss_path = '{}.png'.format(datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S"))
+    try:
+        auth = oss2.Auth(OSS_KEY_ID, OSS_KEY_SECRET)
+        bucket = oss2.Bucket(auth, OSS_ENDPOINT, OSS_BUCKET)
+        bucket.put_object_from_file(oss_path, local_path)
+        oss_url = '{}/{}'.format(OSS_URL_TEMPLATE, oss_path)
+    except Exception as e:
+        print("Error: ",str(e))
+    return oss_url
+
+def upload2dingding(msg, local_path=screenshot_img):
+    if not DINGDING_WEBHOOK:
+        return
+
+    oss_url = upload2oss(local_path)
+    if oss_url is None:
+        oss_url = "404"
+
+    my_data = {
+        "msgtype": "markdown",
+        "markdown": {
+            "title": "CivilNet/AntFarm ERROR",
+            "text": "### gemfield看看你的鸡:  \n >{} \n> ![screenshot]({})".format(msg, oss_url)
+        },
+        "at": {"isAtAll": True} 
+    }
+
+    header = {
+        "Content-Type": "application/json",
+        "Charset": "UTF-8"
+    }
+    try:
+        send_data = json.dumps(my_data).encode("utf-8")
+        request = urllib.request.Request(url=DINGDING_WEBHOOK, data=send_data, headers=header)
+
+        response = urllib.request.urlopen(request)
+        print(response.read())
+    except Exception as e:
+        print("Error: ",str(e))
+
+def errorMsg(msg):
+    print('Error: {}'.format(msg) )
+    upload2dingding(msg)
     sys.exit(1)
 
-def warningMsg(str):
-    print('Warning: {}'.format(str) )
-    return
-    if current_platform == 'Linux':
-        os.system('wall Warning: {}'.format(str))
+def warningMsg(msg):
+    print('Warning: {}'.format(msg) )
+    upload2dingding(msg)
     
 def getRandomSleep():
     return random.randint(30,90)
@@ -106,7 +159,8 @@ class Ant(object):
         self.monitor = cv2.imread(screenshot_img)
         self.height, self.width = self.monitor.shape[:2]
         #delete the image
-        os.remove(screenshot_img)
+        #print(screenshot_img)
+        #os.remove(screenshot_img)
 
     def getIconPos(self, template_name, threshold, is_left=False):
         return self.match(self.template_dict[template_name], threshold, template_name, is_left)
