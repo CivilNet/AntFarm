@@ -269,7 +269,7 @@ class Ant(object):
             print('Though has guest in home, still using double hand to eat food...')
             return
 
-        rc = self.getIconPos('indicator_template', 0.9)
+        rc = self.getIconPos('indicator_template', 0.85)
         if rc:
             print('try to use accelerate card...')
             self.useAccelerateCard()
@@ -309,7 +309,7 @@ class Ant(object):
                 break
             rc = self.getIconPos('farm_thief_flag_template', 0.8)
             if not rc:
-                self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 1.5, 600 )
+                self.swipe(self.width // 2, self.height - 100, self.width // 2, self.height // 1.5, 600 )
                 continue
 
             self.getFoodFromFriend(rc)
@@ -383,7 +383,7 @@ class Ant(object):
 
     def findMoreFriends(self):
         for i in range(5):
-            self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 400 )
+            self.swipe(self.width // 2, self.height - 100, self.width // 2, self.height // 2, 400 )
             self.scanMonitor(0.5)
             rc = self.getIconPos('more_friends_template', 0.9)
             if not rc:
@@ -472,7 +472,7 @@ class Ant(object):
             if self.getIconPos('no_friends_template', 0.8):
                 print('end of friends list')
                 break
-            self.swipe(self.width // 2, self.height - 10, self.width // 2, self.height // 2, 500)
+            self.swipe(self.width // 2, self.height - 100, self.width // 2, self.height // 2, 500)
 
         if self.backToHome():
             return
