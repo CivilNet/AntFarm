@@ -254,7 +254,7 @@ class Ant(object):
         self.scanMonitor(2)
         
     def feed(self):
-        rc2 = self.getIconPos('double_indicator_template', 0.75)
+        rc2 = self.getIconPos('double_indicator_template', 0.80)
         if rc2:
             print('Still using double hand to eat food...')
             return
@@ -269,7 +269,7 @@ class Ant(object):
             print('Though has guest in home, still using double hand to eat food...')
             return
 
-        rc = self.getIconPos('indicator_template', 0.85)
+        rc = self.getIconPos('indicator_template', 0.95)
         if rc:
             print('try to use accelerate card...')
             self.useAccelerateCard()
