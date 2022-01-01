@@ -81,7 +81,7 @@ def upload2dingding(msg, local_path=screenshot_img):
 def errorMsg(msg):
     print('Error: {}'.format(msg) )
     upload2dingding(msg)
-    sys.exit(1)
+    raise Exception("critical error that I have to shutdown...")
 
 def warningMsg(msg):
     print('Warning: {}'.format(msg) )
@@ -586,4 +586,9 @@ if __name__ == "__main__":
     TMPLATES_DIR = '{}_template_icons'.format(args.template)
 
     ant = eval('Ant{}'.format(args.mode))(args.logdir)
-    ant.play()
+    while True:
+        try:
+            ant.play()
+        except Exception as e:
+            print('GEMFIELD: {}. But will try again...'.format(str(e)))
+            time.sleep(10)
