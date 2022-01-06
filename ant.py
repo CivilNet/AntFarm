@@ -269,9 +269,15 @@ class Ant(object):
             print('Though has guest in home, still using double hand to eat food...')
             return
 
-        rc = self.getIconPos('indicator_template', 0.95)
+        rc = self.getIconPos('indicator_template', 0.90)
         if rc:
             print('try to use accelerate card...')
+            self.useAccelerateCard()
+            return
+
+        rc = self.getIconPos('indicator2_template', 0.82)
+        if rc:
+            print('try to use accelerate card by 2...')
             self.useAccelerateCard()
             return
  
